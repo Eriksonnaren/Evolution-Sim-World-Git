@@ -1,0 +1,20 @@
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.exe.config
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.exe
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.pdb
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csprojResolveAssemblyReference.cache
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution_Simulator_World.Form1.resources
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution_Simulator_World.Properties.Resources.resources
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csproj.GenerateResource.Cache
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.exe
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.pdb
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.exe.config
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.exe
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Debug\Evolution Simulator World.pdb
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csprojResolveAssemblyReference.cache
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution_Simulator_World.Form1.resources
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution_Simulator_World.Properties.Resources.resources
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csproj.GenerateResource.Cache
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csproj.CoreCompileInputs.cache
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.exe
+C:\Users\erihor\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.pdb
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Debug\Evolution Simulator World.csproj.CoreCompileInputs.cache
