@@ -9,7 +9,7 @@ using System.Drawing.Drawing2D;
 namespace Evolution_Simulator_World
 {
     [Serializable]
-    public class Creature:BaseObject
+    public class Creature:BaseObject, SelectableObject
     {
         //Creature
         public Vector Pos { get; set; }
@@ -30,9 +30,10 @@ namespace Evolution_Simulator_World
         public bool Selected = false;
         bool SelectedPrev = false;
         int Age = 0;
-        public bool Dead = false;
+        public bool Dead { get; set; } = false;
         public string Name;
         float MaxSpeed;
+        public NewTree.Leaf.Flower Pollen;
         //Eyes
         float EyeRadius=800;
         float EyeRadiusExtra=100;
@@ -46,6 +47,23 @@ namespace Evolution_Simulator_World
         public float EggHue;
         //Brain
         public NeuralNetwork Brain;
+        [Serializable]
+        class Food
+        {
+            public float Energy;
+            public bool Seed;
+            public float MaxEnergy;
+            public Color Col;
+            public NewTree.Leaf.Flower Parent;
+            public Food(NewTree.Leaf.Flower Parent)
+            {
+                this.Parent = Parent;
+                Seed = Form1.Rand.NextDouble() < 0.6;
+                Col = Parent.Leaf.Tree.FruitColor;
+                MaxEnergy = Energy = 250;
+            }
+            
+        }
         List<Food> EatenFood = new List<Food>();
         float[] Inputs;
         float[] Outputs;
@@ -53,9 +71,12 @@ namespace Evolution_Simulator_World
         int ConstantId;
         int EnergyId;
         int SpeedId;
+        int ListenId;
+        int PollenId;
         int ManualSpd = 0;
         int ManualRot = 0;
         bool UseSpike;
+        public float TalkValue;
         //Family
         public List<Creature> Parents;
         public List<Creature> Children=new List<Creature>();
@@ -76,10 +97,13 @@ namespace Evolution_Simulator_World
             this.Pos = Pos;
 
             int EyeAmount = 3;
-            int OutputCount = 3;
-            int InputCount = EyeAmount * 4 + 3;
-            Brain = new RecurrentNetwork(InputCount, OutputCount,7, Form1.Rand.Next(10, 35));
+            int OutputCount = 4;
+            int InputCount = EyeAmount * 3 + 5;
+            //Brain = new RecurrentNetwork(InputCount, OutputCount,7, Form1.Rand.Next(10, 35));
             //Brain = new SpikingNetwork(InputCount, OutputCount,1,10, Form1.Rand.Next(30, 100));
+            Brain = new MemoryNetwork(InputCount, OutputCount, 7);
+            Brain.GenerateRandom(-1,1);
+            //Brain = new FeedForwardNetwork(InputCount, OutputCount,7,3);
             
             Inputs = new float[InputCount];
             Outputs = new float[OutputCount];
@@ -87,11 +111,12 @@ namespace Evolution_Simulator_World
             Inputs[ConstantId] = 1;
             EnergyId = InputCount - 2;
             SpeedId = InputCount - 3;
-
+            ListenId = InputCount - 4;
+            PollenId = InputCount - 5;
             for (int i = 0; i < EyeAmount; i++)
             {
                 float angle = Form1.Rand.Next(0, 360);
-                Eyes.Add(new Eye(this, new Vector(Form1.Cos(angle), Form1.Sin(angle)) * Radius * 1f));
+                Eyes.Add(new Eye(this, new Vector(Form1.Cos(angle), Form1.Sin(angle)) * Radius * 1f,(float)Form1.Rand.NextDouble()));
             }
         }
         
@@ -185,7 +210,7 @@ namespace Evolution_Simulator_World
                 if(EatenFood[0].Energy<=0.01f)
                 {
                     if (EatenFood[0].Seed)
-                        Form1.Seeds.Add(new Seed(EatenFood[0].Parent,Pos));
+                        Form1.NewSeeds.Add(new NewSeed(EatenFood[0].Parent,Pos));
                     EatenFood.RemoveAt(0);
 
                 }
@@ -223,6 +248,11 @@ namespace Evolution_Simulator_World
             D.Graphics.TranslateTransform(x, y);
             D.Graphics.RotateTransform(Angle);
             D.Graphics.FillEllipse(Brushes.White, -MR + MP.X, -MR + MP.Y, MR2, MR2);
+            if(Pollen!=null)
+            {
+                float Rad = R / 5;
+                D.Graphics.FillEllipse(new SolidBrush(Pollen.Col), -Rad + R, -Rad, Rad*2, Rad*2);
+            }
             Boolean Extend;
             if(!(Selected && Form1.ManualControl))
             {
@@ -349,12 +379,18 @@ namespace Evolution_Simulator_World
                     if (C != this)
                         if ((C.Pos - Pos).MagSq() < RR)
                             NearbyObjects.Add(C);
+                        
                 }
-                foreach (Food F in Form1.Foods)
+                foreach (var S in Form1.NewSeeds)
+                {
+                    if ((S.Pos - Pos).MagSq() < RR)
+                        NearbyObjects.Add(S);
+                }
+                /*foreach (Food F in Form1.Foods)
                 {
                     if ((F.Pos - Pos).MagSq() < RR)
                         NearbyObjects.Add(F);
-                }
+                }*/
                 foreach (Tree T in Form1.Trees)
                 {
                     if ((T.Pos - Pos).MagSq() < RR)
@@ -365,6 +401,14 @@ namespace Evolution_Simulator_World
                     if ((E.Pos - Pos).MagSq() < RR)
                         NearbyObjects.Add(E);
                 }
+                foreach (var T in Form1.NewTrees)
+                {
+                    foreach (var F in T.GetAllFlowers())
+                    {
+                        if ((F.Pos - Pos).MagSq() < RR)
+                            NearbyObjects.Add(F);
+                    }
+                }
             }
         }
         
@@ -373,16 +417,32 @@ namespace Evolution_Simulator_World
             //input
             for (int i = 0; i < Eyes.Count; i++)
             {
-                Inputs[i * 4] = Eyes[i].value;
-                Inputs[i * 4 + 1] = Eyes[i].Col.R / 255.0f;
-                Inputs[i * 4 + 2] = Eyes[i].Col.G / 255.0f;
-                Inputs[i * 4 + 3] = Eyes[i].Col.B / 255.0f;
+                Inputs[i * 3] = Eyes[i].Col.R / 255.0f;
+                Inputs[i * 3 + 1] = Eyes[i].Col.G / 255.0f;
+                Inputs[i * 3 + 2] = Eyes[i].Col.B / 255.0f;
             }
+            Inputs[ListenId] = 0;
+            foreach (var item in NearbyObjects)
+            {
+                if(item is Creature)
+                {
+                    Creature C = item as Creature;
+                    float Ratio = (C.Pos - Pos).MagSq() / (EyeRadius * EyeRadius);
+                    if (Ratio<=1)
+                    {
+                        Inputs[ListenId] += (1 - Ratio) * C.TalkValue;
+                    }
+                }
+            }
+            Inputs[ListenId] = Clamp01(Inputs[ListenId]);
             Inputs[EnergyId] = Clamp01(Energy / (StartEnergy + EggEnergy));
             Inputs[SpeedId] = Clamp01(Vel.Mag()/MaxSpeed);
+            Inputs[PollenId] = Pollen != null?1:0;
             Brain.SetInputs(Inputs);
             Brain.Update();
+            //output
             Outputs=Brain.GetOutputs();
+            TalkValue = Clamp01(Outputs[3]);
         }
         
         float Clamp(float x)
@@ -405,7 +465,7 @@ namespace Evolution_Simulator_World
         }
         void Collide()
         {
-            Boolean Extend;
+            bool Extend;
             if (!(Selected && Form1.ManualControl))
             {
                 Extend = UseSpike;
@@ -414,8 +474,9 @@ namespace Evolution_Simulator_World
             {
                 Extend = Form1.HoldKeys.Contains(System.Windows.Forms.Keys.Space);
             }
-            foreach (BaseObject I in NearbyObjects)
+            for (int i = NearbyObjects.Count-1; i >= 0; i--)
             {
+                var I = NearbyObjects[i];
                 float R = I.Radius + Radius;
                 Vector RelPos = I.Pos - Pos;
                 if ((I.Pos-Pos).MagSq()<R*R)//intersect
@@ -425,9 +486,8 @@ namespace Evolution_Simulator_World
                         Vector Push = RelPos * -((Vel.Mag() + 2) / RelPos.Mag());
                         Vel += Push;
                     }
-                    else if (I is Creature)
+                    else if (I is Creature C)
                     {
-                        Creature C = (I as Creature);
                         float R2 = C.Radius + MouthRadius * Radius;
                         float mult = 1;
                         if (Extend && (C.Pos - (Pos + (MouthPos * Radius).Rot(AngleVector))).MagSq() < R2 * R2)
@@ -442,9 +502,8 @@ namespace Evolution_Simulator_World
                             C.Vel -= Push;
                         }
                     }
-                    else if (I is Food)
+                    /*else if (I is Food Fod)
                     {
-                        Food Fod = (I as Food);
                         float R2 = Fod.Radius + MouthRadius * Radius;
                         if (!Extend && (Fod.Pos - (Pos + (MouthPos * Radius).Rot(AngleVector))).MagSq() < R2 * R2)
                         {
@@ -457,19 +516,42 @@ namespace Evolution_Simulator_World
                             Vel += Push;
                             Fod.Vel -= Push * 2;
                         }
+                    }*/
+                    else if (I is NewSeed S)
+                    {
+                        float R2 = S.Radius + MouthRadius * Radius;
+                        if (!Extend && (S.Pos - (Pos + (MouthPos * Radius).Rot(AngleVector))).MagSq() < R2 * R2&&S.Edible)
+                        {
+                            Energy += 125;
+                            S.Dead = true;
+                            NearbyObjects.Remove(S);
+                        }
+                        else
+                        {
+                            Vector Push = RelPos * -((Vel.Mag() + 2) / (2 * RelPos.Mag()));
+                            Vel += Push;
+                            S.Vel -= Push * 2;
+                        }
+                    }
+                    else if (I is NewTree.Leaf.Flower F)
+                    {
+                        if(F.Pollen !=null&&F.FruitDone)
+                        {
+                            Eat(F);
+                        }else
+                            F.CollideWith(this);
                     }
                 }
             }
             for (int i = NearbyObjects.Count-1; i >= 0; i--)
             {
-                if(NearbyObjects[i] is Food)
+                /*if(NearbyObjects[i] is Food Fod)
                 {
-                    Food Fod = NearbyObjects[i] as Food;
                     if(Fod.Dead)
                     {
                         NearbyObjects.RemoveAt(i);
                     }
-                }else 
+                }else */
                 if (NearbyObjects[i] is Creature)
                 {
                     Creature Cre = NearbyObjects[i] as Creature;
@@ -486,13 +568,16 @@ namespace Evolution_Simulator_World
             C.Energy -= EnergyGain*4/3f;
             Energy += EnergyGain;
         }
-        void Eat(Food Fod)
+        void Eat(NewTree.Leaf.Flower Flower)
         {
-            EatenFood.Add(Fod);
+            Flower.Leaf.CurrentFlower = null;
+            EatenFood.Add(new Food(Flower));
+            NearbyObjects.Remove(Flower);
         }
         public void Mutate()
         {
             Name=MutateName(Name);
+            Brain.Mutate(0.1f);
             Hue += (float)(1 - Form1.Rand.NextDouble() * 2) * 0.05f;
             EggHue += (float)(1 - Form1.Rand.NextDouble() * 2) * 0.05f;
             Hue = Clamp01(Hue);
@@ -559,29 +644,34 @@ namespace Evolution_Simulator_World
         public class Eye
         {
             public Vector Pos;
+            Vector PosNorm;
             Creature Parent;
             float Radius = 5;
+            public float Fov;
             public Color Col;
             public Color FullColor;
             public float value;
             public float Hue;
             public BaseObject LookAt;
-            public Eye(Creature Parent,Vector Pos)
+            public Eye(Creature Parent,Vector Pos,float Fov)
             {
+                this.Fov = Fov;
                 this.Parent = Parent;
                 this.Pos = Pos;
+                PosNorm = Pos/Pos.Mag();
             }
             public void Update()
             {
-                Vector BodyPos = Pos.Rot(Parent.AngleVector);
+                Vector BodyPos = PosNorm.Rot(Parent.AngleVector);
                 Vector WorldPos = Parent.Pos + BodyPos;
                 BaseObject NearestObj=null;
                 float Dist = Parent.EyeRadius* Parent.EyeRadius;
                 foreach (BaseObject B in Parent.NearbyObjects)
                 {
                     Vector RelPos = B.Pos - Parent.Pos;
-                    float Dot = BodyPos.X * (RelPos.X - BodyPos.X) + BodyPos.Y * (RelPos.Y - BodyPos.Y);
-                    if (Dot > 0)
+                    Vector V2 = RelPos - BodyPos;
+                    float Dot = BodyPos * (V2/V2.Mag());
+                    if (Dot > 1-Fov*Fov)
                     {
                         float D = (B.Pos - WorldPos).MagSq();
                         if (D < Dist)

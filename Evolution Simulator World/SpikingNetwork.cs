@@ -108,35 +108,31 @@ namespace Evolution_Simulator_World
                 }
             }*/
         }
-        public SpikingNetwork(SpikingNetwork OldNetwork)
+        public override void CopyFrom(NeuralNetwork N)
         {
-
-            int OutputCount = OldNetwork.Outputs.Length;
-            int Layers = OldNetwork.Neurons.Length;
-            int InputCount = OldNetwork.Inputs.Length;
+            SpikingNetwork N2 = N as SpikingNetwork;
+            OutputCount = N.OutputCount;
+            Layers = N.Layers;
+            NeuronCount = N.NeuronCount;
+            InputCount = N.InputCount;
             Outputs = new float[OutputCount];
             Inputs = new float[InputCount];
             Neurons = new Neuron[Layers][];
             for (int i = 0; i < Layers; i++)
             {
-                Neurons[i] = new Neuron[OldNetwork.Neurons[i].Length];
+                Neurons[i] = new Neuron[N2.Neurons[i].Length];
             }
             for (int i = 0; i < Layers; i++)
             {
                 for (int j = 0; j < Neurons[i].Length; j++)
                 {
-                    Neurons[i][j] = new Neuron(OldNetwork.Neurons[i][j].timer_max);
-                    foreach (var S in OldNetwork.Neurons[i][j].Synapses)
+                    Neurons[i][j] = new Neuron(N2.Neurons[i][j].timer_max);
+                    foreach (var S in N2.Neurons[i][j].Synapses)
                     {
                         Neurons[i][j].Synapses.Add(S);
                     }
                 }
             }
-        }
-        public override NeuralNetwork Copy()
-        {
-            return new SpikingNetwork(this);
-
         }
         public override void Show(Graphics Graphics, Rectangle Rect)
         {
@@ -152,7 +148,7 @@ namespace Evolution_Simulator_World
             {
                 for (int j = 0; j < Neurons[i].Length; j++)
                 {
-                    Color C = CLerp(Color.Black, Color.White, Clamp01(Neurons[i][j].value));
+                    Color C = CLerp(Color.Black, Color.White, Clamp(Neurons[i][j].value,0,1));
                     PointF Pos = new PointF(Rect.X + Padding + dX * i - r, Rect.Y + Padding + dY * j - r);
                     Graphics.FillEllipse(new SolidBrush(C), Pos.X, Pos.Y, r * 2, r * 2);
                     Graphics.DrawEllipse(new Pen(Color.Black, 2), Pos.X, Pos.Y, r * 2, r * 2);
@@ -220,10 +216,10 @@ namespace Evolution_Simulator_World
             Neurons[i][j].Add(Value);
             if(i==Neurons.Length-1)
             {
-                Outputs[j] = Clamp01(Outputs[j]+Value);
+                Outputs[j] = Clamp(Outputs[j]+Value,0,1);
             }
         }
-        public override void Mutate()
+        public new void Mutate(float MutationRate, float MinValue = 0, float MaxValue = 0)
         {
             int Layer = Form1.Rand.Next(Neurons.Length - 1);
             int Source = Form1.Rand.Next(Neurons[Layer].Length);

@@ -16,6 +16,8 @@ namespace Evolution_Simulator_World
         public static float ArenaRadius = 10000;
         public static List<Creature> Creatures = new List<Creature>();
         public static List<Tree> Trees = new List<Tree>();
+        public static List<NewTree> NewTrees = new List<NewTree>();
+        public static List<NewSeed> NewSeeds = new List<NewSeed>();
         public static List<Food> Foods = new List<Food>();
         public static List<Egg> Eggs = new List<Egg>();
         public static List<Seed> Seeds = new List<Seed>();
@@ -23,18 +25,20 @@ namespace Evolution_Simulator_World
         BufferedGraphics BG;
         public static PictureBox PB;
         Draw Draw;
-        UpdateWorld update;
+        
+        public static UpdateWorld update;
         FileHandler FileHandler;
         Timer T = new Timer();
         static float[] SinArray;
         static float[] CosArray;
-        static int SinAmount = 360;
+        static int SinAmount = 720;
         public static PointF MousePos;
         public PointF MousePosPrev;
         public static float fps;
         public static bool ManualControl = false;
         public static string StartPath=Application.StartupPath;
         public static List<Keys> HoldKeys = new List<Keys>();
+        bool CameraMoved = false;
         public Form1()
         {
             InitializeComponent();
@@ -47,9 +51,10 @@ namespace Evolution_Simulator_World
             PB.Location = new Point(0, 0);
             WindowState = FormWindowState.Maximized;
             PB.Dock = DockStyle.Fill;
-            BufferedGraphicsContext Context = BufferedGraphicsManager.Current;
-            BG = Context.Allocate(PB.CreateGraphics(), PB.DisplayRectangle);
+            //BufferedGraphicsContext Context = BufferedGraphicsManager.Current;
+            BG = BufferedGraphicsManager.Current.Allocate(PB.CreateGraphics(), PB.DisplayRectangle);
             Draw = new Draw(BG.Graphics, PB.Size);
+            
             update = new UpdateWorld();
             T.Interval = 20;
             fps = 1000 / T.Interval;
@@ -72,7 +77,7 @@ namespace Evolution_Simulator_World
                 float Dist = Sqrt((float)Rand.NextDouble()) * (Form1.ArenaRadius - 200);
                 float X = Cos(angle) * Dist;
                 float Y = Sin(angle) * Dist;
-                Trees.Add(new Tree(new Vector(X, Y)));
+                NewTrees.Add(new NewTree(new Vector(X, Y)));
             }
             for (int i = 0; i < UpdateWorld.MinCreatures; i++)
             {
@@ -82,11 +87,15 @@ namespace Evolution_Simulator_World
                 float Y = Sin(angle) * Dist;
                 Creatures.Add(new Creature(new Vector(X, Y)));
             }
-            
+            update.Reset();
+            /*NewTree Tr = new NewTree(new Vector(0, 0));
+            NewTrees.Add(Tr);
+            Tr.Leaves[0]=Tr.Branches[0].Leaves[0]= new NewTree.Leaf(Tr.Branches[0],90,-90,0);
+            Tr = new NewTree(new Vector(0, 200));
+            NewTrees.Add(Tr);
+            Tr.Leaves[0] = Tr.Branches[0].Leaves[0] = new NewTree.Leaf(Tr.Branches[0], 90, 90, 0);
+            Draw.Selected = Tr;*/
         }
-
-
-
         private void T_Tick(object sender, EventArgs e)
         {
             MouseStuff();
@@ -94,7 +103,6 @@ namespace Evolution_Simulator_World
             update.MainUpdate();
             Draw.MainDraw();
             FileHandler.Show(Draw);
-
             BG.Render();
         }
         public static Color ColorFromHue(float h)
@@ -143,21 +151,35 @@ namespace Evolution_Simulator_World
         }
         private void Form1_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (e.Delta > 0)
+            if (Draw.Selected is NewTree&&Draw.Rect3D.Contains((int)MousePos.X, (int)MousePos.Y))
             {
-                Draw.CameraPosition.X -= ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
-                Draw.CameraPosition.Y -= ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
-                Draw.Zoom *= 1.2f;
-                Draw.CameraPosition.X += ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
-                Draw.CameraPosition.Y += ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                if (e.Delta < 0)
+                {
+                    Draw.Draw3D.CameraDist *= 1.1F;
+                }
+                else if (e.Delta > 0)
+                {
+                    Draw.Draw3D.CameraDist /= 1.1F;
+                }
             }
-            else if (e.Delta < 0)
+            else
             {
-                Draw.CameraPosition.X -= ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
-                Draw.CameraPosition.Y -= ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
-                Draw.Zoom /= 1.2f;
-                Draw.CameraPosition.X += ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
-                Draw.CameraPosition.Y += ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                if (e.Delta > 0)
+                {
+                    Draw.CameraPosition.X -= ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
+                    Draw.CameraPosition.Y -= ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                    Draw.Zoom *= 1.2f;
+                    Draw.CameraPosition.X += ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
+                    Draw.CameraPosition.Y += ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                }
+                else if (e.Delta < 0)
+                {
+                    Draw.CameraPosition.X -= ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
+                    Draw.CameraPosition.Y -= ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                    Draw.Zoom /= 1.2f;
+                    Draw.CameraPosition.X += ((PB.Width / 2 - MousePos.X) / Draw.Zoom);
+                    Draw.CameraPosition.Y += ((PB.Height / 2 - MousePos.Y) / Draw.Zoom);
+                }
             }
         }
         MouseButtons PrevButton;
@@ -165,13 +187,18 @@ namespace Evolution_Simulator_World
         void MouseStuff()
         {
             if (PrevButton != MouseButtons.None && MouseButtons == MouseButtons.None)
-                MouseRelease(PrevButton);
+            {
+                if(!CameraMoved)
+                    MouseRelease(PrevButton);
+                CameraMoved = false;
+            }
             MousePosPrev = MousePos;
             MousePos = PointToClient(MousePosition);
             if (MouseButtons == MouseButtons.Right)
             {
-                Draw.CameraPosition.X -= (MousePos.X - MousePosPrev.X) / Draw.Zoom;
-                Draw.CameraPosition.Y -= (MousePos.Y - MousePosPrev.Y) / Draw.Zoom;
+                Draw.MouseDrag(MousePos.X - MousePosPrev.X, (MousePos.Y - MousePosPrev.Y));
+                if (MousePos.X != MousePosPrev.X || MousePos.Y != MousePosPrev.Y)
+                    CameraMoved = true;
             }
             PrevButton = MouseButtons;
             MouseHold = (MouseButtons != MouseButtons.None);
@@ -181,8 +208,14 @@ namespace Evolution_Simulator_World
             if (!(Draw.MousePress()||FileHandler.MousePress()||Draw.SelectedFamily))
             {
                 Vector WorldPos = Draw.ScreenToWorld(MousePos.X, MousePos.Y);
-                Creature C = Creatures.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
-                Draw.Selected = C;
+                Draw.Selected = Creatures.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
+                if(Draw.Selected==null)
+                    Draw.Selected = Trees.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
+                if (Draw.Selected == null)
+                    Draw.Selected = NewTrees.Find(x => x.PointOnTree(WorldPos));
+                Draw.SelectedCreature = Draw.Selected as Creature;
+                Draw.SelectedTree = Draw.Selected as Tree;
+                //Draw.SelectedTree = Draw.Selected as Tree;
                 ManualControl = false;
             }
         }

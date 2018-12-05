@@ -1,0 +1,10 @@
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Release\Evolution Simulator World.exe.config
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Release\Evolution Simulator World.exe
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\bin\Release\Evolution Simulator World.pdb
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution Simulator World.csprojAssemblyReference.cache
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution_Simulator_World.Form1.resources
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution_Simulator_World.Properties.Resources.resources
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution Simulator World.csproj.GenerateResource.cache
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution Simulator World.csproj.CoreCompileInputs.cache
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution Simulator World.exe
+C:\Users\erikh\OneDrive\Visual Studio\Evolution Simulator World\Evolution Simulator World\obj\Release\Evolution Simulator World.pdb

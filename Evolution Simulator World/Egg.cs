@@ -71,7 +71,7 @@ namespace Evolution_Simulator_World
         void Hatch()
         {
             Child.IsEgg = null;
-            Child.Brain = Parents[0].Brain.Copy();
+            Child.Brain.CopyFrom(Parents[0].Brain);
             int EyeMin = Parents[0].Eyes.Count;
             int EyeMax = EyeMin;
             for (int i2 = 1; i2 < Parents.Count; i2++)
@@ -87,7 +87,7 @@ namespace Evolution_Simulator_World
                 int Id = Form1.Rand.Next(Parents.Count);
                 while (Parents[Id].Eyes.Count < i + 1)
                     Id = (Id + 1) % Parents.Count;
-                Child.Eyes.Add(new Creature.Eye(Child, Parents[Id].Eyes[i].Pos));
+                Child.Eyes.Add(new Creature.Eye(Child, Parents[Id].Eyes[i].Pos,Parents[Id].Eyes[i].Fov));
             }
 
             int EyeId = Form1.Rand.Next(Child.Eyes.Count);
@@ -96,6 +96,9 @@ namespace Evolution_Simulator_World
             float Cos = (float)Math.Cos(Angle);
             Vector OldPos = Child.Eyes[EyeId].Pos;
             Child.Eyes[EyeId].Pos = new Vector(OldPos.X * Cos + OldPos.Y * Sin, OldPos.Y * Cos - OldPos.X * Sin);
+            Child.Eyes[EyeId].Fov += (float)Form1.Rand.NextDouble()*0.1f;
+            Child.Eyes[EyeId].Fov = Child.Eyes[EyeId].Fov < 0 ? 0 : Child.Eyes[EyeId].Fov;
+            Child.Eyes[EyeId].Fov = Child.Eyes[EyeId].Fov > 1 ? 1 : Child.Eyes[EyeId].Fov;
             //mutate
             Child.Name = Parents[0].Name;
             Child.Hue = Parents[0].Hue;

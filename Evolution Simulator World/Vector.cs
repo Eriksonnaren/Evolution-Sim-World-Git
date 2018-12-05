@@ -17,6 +17,11 @@ namespace Evolution_Simulator_World
             this.X = X;
             this.Y = Y;
         }
+        public Vector (Vector3 V)
+        {
+            X = (float)V.X;
+            Y = (float)V.Y;
+        }
         public static Vector operator +(Vector V1,Vector V2)
         {
             return new Vector(V1.X + V2.X,V1.Y+V2.Y);
@@ -32,6 +37,10 @@ namespace Evolution_Simulator_World
         public static Vector operator *(float d, Vector V1)
         {
             return new Vector(V1.X * d, V1.Y * d);
+        }
+        public static float operator *(Vector V1,Vector V2)
+        {
+            return V1.X * V2.X + V1.Y * V2.Y;
         }
         public static Vector operator /(Vector V1, float d)
         {
@@ -52,6 +61,10 @@ namespace Evolution_Simulator_World
         public PointF ToPoint()
         {
             return new PointF(X,Y);
+        }
+        public static Vector Lerp(Vector V1,Vector V2,float T)
+        {
+            return new Vector(V1.X + (V2.X - V1.X) * T, V1.Y + (V2.Y - V1.Y) * T);
         }
     }
 }

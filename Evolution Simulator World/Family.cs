@@ -225,7 +225,7 @@ namespace Evolution_Simulator_World
                     HoverFamily.Insert(0,FamilyTree[CurrentGen][CurrentPos]);
                 }
                 if (Form1.MouseHold)
-                    D.Selected = Hover;
+                    D.Selected = D.SelectedCreature = Hover;
             }
             ShowScroll(D);
         }

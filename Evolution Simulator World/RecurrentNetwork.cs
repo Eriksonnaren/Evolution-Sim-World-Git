@@ -10,43 +10,59 @@ namespace Evolution_Simulator_World
     [Serializable]
     class RecurrentNetwork : NeuralNetwork
     {
-        float[][] WeightMatrix;//i=in,j=out,neurons last
         float[] Inputs;
         float[] Neurons;
         float[] Outputs;
-        public RecurrentNetwork(int InputCount, int OutputCount,int NeuronCount,int StartingSynapsAmount)
+        public RecurrentNetwork(int InputCount, int OutputCount,int NeuronCount)
         {
+            this.InputCount = InputCount;
+            this.InputCount = InputCount;
+            this.InputCount = InputCount;
             Inputs = new float[InputCount];
             Outputs = new float[OutputCount];
             Neurons = new float[NeuronCount];
-            WeightMatrix = new float[Inputs.Length + Neurons.Length][];
-            for (int i = 0; i < WeightMatrix.Length; i++)
-            {
-                WeightMatrix[i] = new float[Outputs.Length + Neurons.Length];
-            }
-            for (int i = 0; i < StartingSynapsAmount; i++)
-            {
-                WeightMatrix[Form1.Rand.Next(WeightMatrix.Length)][Form1.Rand.Next(WeightMatrix[0].Length)] = 4 * (float)Form1.Rand.NextDouble() - 2;
-            }
+            WeightMatrix = new float[(Inputs.Length + Neurons.Length)* (Outputs.Length + Neurons.Length)];
         }
-        public RecurrentNetwork(RecurrentNetwork OldNetwork)
+        public void GenerateRandom(int StartingSynapsAmount = 0)
         {
-            Inputs = new float[OldNetwork.Inputs.Length];
-            Outputs = new float[OldNetwork.Outputs.Length];
-            Neurons = new float[OldNetwork.Neurons.Length];
-            WeightMatrix = new float[Inputs.Length + Neurons.Length][];
-            for (int i = 0; i < WeightMatrix.Length; i++)
+            if (StartingSynapsAmount > 0)
             {
-                WeightMatrix[i] = new float[Outputs.Length + Neurons.Length];
-                for (int j = 0; j < Outputs.Length + Neurons.Length; j++)
+                for (int i = 0; i < StartingSynapsAmount; i++)
                 {
-                    WeightMatrix[i][j] = OldNetwork.WeightMatrix[i][j];
+                    WeightMatrix[Form1.Rand.Next(WeightMatrix.Length)] = 4 * (float)Form1.Rand.NextDouble() - 2;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < WeightMatrix.Length; i++)
+                {
+                    WeightMatrix[i] = 4 * (float)Form1.Rand.NextDouble() - 2;
                 }
             }
         }
-        public override NeuralNetwork Copy()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="i">Start</param>
+        /// <param name="j">End</param>
+        /// <returns></returns>
+        int ToIndex(int i, int j)
         {
-            return new RecurrentNetwork(this);
+            return i + j* (Inputs.Length + Neurons.Length);
+        }
+        public override void CopyFrom(NeuralNetwork N )
+        {
+            InputCount = N.InputCount;
+            NeuronCount = N.NeuronCount;
+            OutputCount = N.OutputCount;
+            Inputs = new float[InputCount];
+            Outputs = new float[OutputCount];
+            Neurons = new float[NeuronCount];
+            WeightMatrix = new float[(Inputs.Length + Neurons.Length)* (Outputs.Length + Neurons.Length)];
+            for (int i = 0; i < WeightMatrix.Length; i++)
+            {
+                    WeightMatrix[i] = N.WeightMatrix[i];
+            }
         }
         public override void Show(Graphics Graphics,Rectangle Rect)
         {
@@ -68,7 +84,7 @@ namespace Evolution_Simulator_World
             for (int i = 0; i < Neurons.Length; i++)
             {
                 Color C = CLerp(Color.Black, Color.White, Neurons[i]);
-                PointF Pos = new PointF(Rect.X+Rect.Width/2-r, Rect.Y + Padding + dY * (i+0.5f) - r);
+                PointF Pos = new PointF(Rect.X + Rect.Width / 2 - r, Rect.Y + Padding + dY * (i + 0.5f) - r);
                 Graphics.FillEllipse(new SolidBrush(C), Pos.X, Pos.Y, r * 2, r * 2);
                 Graphics.DrawEllipse(new Pen(Color.Black, 2), Pos.X, Pos.Y, r * 2, r * 2);
             }
@@ -79,23 +95,23 @@ namespace Evolution_Simulator_World
                     C = CLerp(Color.Black, Color.Red, Outputs[i]);
                 else
                     C = CLerp(Color.Black, Color.Blue, -Outputs[i]);
-                PointF Pos = new PointF(Rect.X+ Rect.Width- Padding - r, Rect.Y + Padding + dY * i - r);
+                PointF Pos = new PointF(Rect.X + Rect.Width - Padding - r, Rect.Y + Padding + dY * i - r);
                 Graphics.FillEllipse(new SolidBrush(C), Pos.X, Pos.Y, r * 2, r * 2);
                 Graphics.DrawEllipse(new Pen(Color.Black, 2), Pos.X, Pos.Y, r * 2, r * 2);
             }
             Pe = new Pen(Color.Orange, 2);
-            for (int i = 0; i < WeightMatrix.Length; i++)
+            for (int i = 0; i < InputCount + NeuronCount; i++)
             {
-                for (int j = 0; j < WeightMatrix[0].Length; j++)
+                for (int j = 0; j < NeuronCount+OutputCount; j++)
                 {
-                    if (WeightMatrix[i][j] != 0)
+                    if (WeightMatrix[ToIndex(i,j)] != 0)
                     {
                         Color Col;
                         float mult = NeuronValueFromWeight(i);
-                        if (WeightMatrix[i][j] > 0)
-                            Col = Color.FromArgb((int)(WeightMatrix[i][j] * 127 * mult), Color.Red);
+                        if (WeightMatrix[ToIndex(i, j)] > 0)
+                            Col = Color.FromArgb((int)(WeightMatrix[ToIndex(i, j)] * 127 * mult), Color.Red);
                         else
-                            Col = Color.FromArgb(-(int)(WeightMatrix[i][j] * 127 * mult), Color.Blue);
+                            Col = Color.FromArgb(-(int)(WeightMatrix[ToIndex(i, j)] * 127 * mult), Color.Blue);
                         Pe.Color = Col;
                         PointF Start = NeuronPosIn(i);
                         PointF End = NeuronPosOut(j);
@@ -146,7 +162,7 @@ namespace Evolution_Simulator_World
                         mult = Inputs[j];
                     else
                         mult = Neurons[j - Inputs.Length];
-                    Sum += WeightMatrix[j][i + Outputs.Length] * mult;
+                    Sum += WeightMatrix[ToIndex(j,i + Outputs.Length)] * mult;
                 }
                 Neurons[i] = ActivSig(Sum);
             }
@@ -161,17 +177,10 @@ namespace Evolution_Simulator_World
                         mult = Inputs[j];
                     else
                         mult = Neurons[j - Inputs.Length];
-                    Sum += WeightMatrix[j][i] * mult;
+                    Sum += WeightMatrix[ToIndex(i,j)] * mult;
                 }
-                Outputs[i] = Clamp(Sum);
+                Outputs[i] = Clamp(Sum,-1,1);
             }
-        }
-        public override void Mutate()
-        {
-            if (Form1.Rand.NextDouble() < 0.66)
-                WeightMatrix[Form1.Rand.Next(WeightMatrix.Length)][Form1.Rand.Next(WeightMatrix[0].Length)] = 4 * (float)Form1.Rand.NextDouble() - 2;
-            else
-                WeightMatrix[Form1.Rand.Next(WeightMatrix.Length)][Form1.Rand.Next(WeightMatrix[0].Length)] = 0;
         }
         float ActivSig(float x)
         {

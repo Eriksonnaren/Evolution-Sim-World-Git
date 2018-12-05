@@ -8,7 +8,7 @@ using System.Drawing;
 namespace Evolution_Simulator_World
 {
     [Serializable]
-    public class Tree:BaseObject
+    public class Tree:BaseObject, SelectableObject
     {
         public Vector Pos { get; set; }
         public float Radius { get { return 90; } }
@@ -29,7 +29,7 @@ namespace Evolution_Simulator_World
         public Color Col { get; set; }
         public float Hue { get; set; }
         public float FoodHue;
-        public bool Dead = false;
+        public bool Dead { get; set; } = false;
         public float SeedGrowthPercent = 0.15f;//how high is the chanse of a food producing a seed
         public Tree(Vector Pos,int BranchAmount = 0)
         {
