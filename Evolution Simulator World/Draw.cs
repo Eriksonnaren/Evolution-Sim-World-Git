@@ -18,7 +18,6 @@ namespace Evolution_Simulator_World
         public float Zoom = 1;
         public Creature SelectedCreature;
         public SelectableObject Selected;
-        public Tree SelectedTree;
         public bool SelectedFamily;
         bool BlindMode = false;
         public bool EyeRings = false;
@@ -106,7 +105,6 @@ namespace Evolution_Simulator_World
                 {
                     Selected = null;
                     SelectedCreature = null;
-                    SelectedTree = null;
                     SelectedFamily = false;
                 }
             }
@@ -145,11 +143,6 @@ namespace Evolution_Simulator_World
             }
             if (SelectedCreature == null || !BlindMode)
             {
-                foreach (var T in Form1.Trees)
-                {
-                    PointF P = WorldToScreen(T.Pos.X, T.Pos.Y);
-                    T.ShowBelow(this, P.X, P.Y, Zoom);
-                }
                 foreach (var E in Form1.Eggs)
                 {
                     PointF P = WorldToScreen(E.Pos.X, E.Pos.Y);
@@ -160,24 +153,8 @@ namespace Evolution_Simulator_World
                 {
                     PointF P = WorldToScreen(C.Pos.X, C.Pos.Y);
                     C.Show(this, P.X, P.Y, Zoom);
-
-                }
-                foreach (var T in Form1.Trees)
-                {
-                    PointF P = WorldToScreen(T.Pos.X, T.Pos.Y);
-                    T.Show(this, P.X, P.Y, Zoom);
-                }
-                foreach (var F in Form1.Foods)
-                {
-                    PointF P = WorldToScreen(F.Pos.X, F.Pos.Y);
-                    F.Show(this, P.X, P.Y, Zoom);
                 }
                 foreach (var S in Form1.Seeds)
-                {
-                    PointF P = WorldToScreen(S.Pos.X, S.Pos.Y);
-                    S.Show(this, P.X, P.Y, Zoom);
-                }
-                foreach (var S in Form1.NewSeeds)
                 {
                     PointF P = WorldToScreen(S.Pos.X, S.Pos.Y);
                     S.Show(this, P.X, P.Y, Zoom);
@@ -187,7 +164,7 @@ namespace Evolution_Simulator_World
                     PointF P = WorldToScreen(C.Pos.X, C.Pos.Y);
                     Graphics.DrawString(C.Name, FontC, Brushes.Black, P.X, P.Y - C.Radius * Zoom * 1.5f, SF);
                 }
-                foreach (var T in Form1.NewTrees)
+                foreach (var T in Form1.Trees)
                 {
                     PointF P = WorldToScreen(T.Pos.X, T.Pos.Y);
                     T.Show2D(this, P.X, P.Y, Zoom);
@@ -201,7 +178,7 @@ namespace Evolution_Simulator_World
             if (UpdateFamily)
                 UpdateFamilyList();
             CreatureText.Text = "Creatures:" + Form1.Creatures.Count.ToString();
-            TreeText.Text = "Trees:" + Form1.NewTrees.Count.ToString();
+            TreeText.Text = "Trees:" + Form1.Trees.Count.ToString();
             if (SelectedCreature != null)
             {
                 Rectangle BrainRect = new Rectangle(20, 70, 190, 350);
@@ -230,7 +207,7 @@ namespace Evolution_Simulator_World
                 }*/
                 SelectedCreature.Brain.Show(Graphics, BrainRect);
             }
-            if (Selected is NewTree T)
+            if (Selected is Tree T)
             {
                 T.Selected = true;
                 T.ShowSelected(this,Draw3D);
@@ -314,7 +291,7 @@ namespace Evolution_Simulator_World
         }
         public void MouseDrag(float Dx, float Dy)
         {
-            if (Selected is NewTree)
+            if (Selected is Tree)
             {
                 float mult = 0.3F;
 

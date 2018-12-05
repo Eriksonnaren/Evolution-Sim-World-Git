@@ -16,11 +16,8 @@ namespace Evolution_Simulator_World
         public static float ArenaRadius = 10000;
         public static List<Creature> Creatures = new List<Creature>();
         public static List<Tree> Trees = new List<Tree>();
-        public static List<NewTree> NewTrees = new List<NewTree>();
-        public static List<NewSeed> NewSeeds = new List<NewSeed>();
-        public static List<Food> Foods = new List<Food>();
-        public static List<Egg> Eggs = new List<Egg>();
         public static List<Seed> Seeds = new List<Seed>();
+        public static List<Egg> Eggs = new List<Egg>();
         public static Random Rand = new Random();
         BufferedGraphics BG;
         public static PictureBox PB;
@@ -77,7 +74,7 @@ namespace Evolution_Simulator_World
                 float Dist = Sqrt((float)Rand.NextDouble()) * (Form1.ArenaRadius - 200);
                 float X = Cos(angle) * Dist;
                 float Y = Sin(angle) * Dist;
-                NewTrees.Add(new NewTree(new Vector(X, Y)));
+                Trees.Add(new Tree(new Vector(X, Y)));
             }
             for (int i = 0; i < UpdateWorld.MinCreatures; i++)
             {
@@ -151,7 +148,7 @@ namespace Evolution_Simulator_World
         }
         private void Form1_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (Draw.Selected is NewTree&&Draw.Rect3D.Contains((int)MousePos.X, (int)MousePos.Y))
+            if (Draw.Selected is Tree&&Draw.Rect3D.Contains((int)MousePos.X, (int)MousePos.Y))
             {
                 if (e.Delta < 0)
                 {
@@ -209,12 +206,9 @@ namespace Evolution_Simulator_World
             {
                 Vector WorldPos = Draw.ScreenToWorld(MousePos.X, MousePos.Y);
                 Draw.Selected = Creatures.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
-                if(Draw.Selected==null)
-                    Draw.Selected = Trees.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
                 if (Draw.Selected == null)
-                    Draw.Selected = NewTrees.Find(x => x.PointOnTree(WorldPos));
+                    Draw.Selected = Trees.Find(x => x.PointOnTree(WorldPos));
                 Draw.SelectedCreature = Draw.Selected as Creature;
-                Draw.SelectedTree = Draw.Selected as Tree;
                 //Draw.SelectedTree = Draw.Selected as Tree;
                 ManualControl = false;
             }

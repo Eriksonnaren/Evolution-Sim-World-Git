@@ -4,86 +4,79 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 
 namespace Evolution_Simulator_World
 {
     [Serializable]
-    public class Seed:BaseObject
+    public class Seed : BaseObject
     {
         public Vector Pos { get; set; }
         public Color Col { get; set; }
-        public float Radius { get { return 20; } }
+        public float Radius { get { return 10; } }
         public float Hue { get; set; }
-        float Angle = 0;
-        float Time = 0;
-        float maxTime = 10;//sec
-        float AngleSpeed1;
-        float AngleSpeed2;
+        public Vector Vel;
+        public bool Dead;
         Tree Parent;
-        public Seed(Tree Parent,Vector Pos)
+        Tree Parent2;
+        Tree.Leaf Leaf;
+        float SeedTimer = 0;
+        const float SeedTimerMax = 30;
+        readonly float StartEnergy;
+        public readonly bool Edible;
+        public Seed(Tree Parent,Tree.Leaf Leaf)
         {
-            this.Pos = Pos;
+            StartEnergy = 5;
+            Col = Color.YellowGreen;
             this.Parent = Parent;
-            Hue = Parent.Hue;
-            Col = Parent.Col;
-            AngleSpeed1 = Form1.Rand.Next(20,70) / 10f;
-            AngleSpeed2 = Form1.Rand.Next(20, 70) / 10f;
-            //AngleSpeed2 = 1;
-            AngleSpeed2 = AngleSpeed2 / AngleSpeed1;
+            this.Leaf = Leaf;
+            Edible = true;
+        }
+        public Seed(Tree.Leaf.Flower Fruit,Vector Pos)
+        {
+            this.Pos=Pos;
+            Parent = Fruit.Leaf.Tree;
+            Parent2 = Fruit.Pollen.Leaf.Tree;
+            StartEnergy = 30;
+            Col = Fruit.Col;
+            Edible = false;
+        }
+        public void Fall()
+        {
+            float Angle = Form1.Rand.Next(0, 360);
+            float Rad = (float)(Math.Sqrt(Form1.Rand.NextDouble())*Leaf.Center.Z*Tree.SizeScale2d);
+            Vector DeltaPos = new Vector(Form1.Cos(Angle)*Rad, Form1.Sin(Angle) * Rad);
+            Pos = new Vector((float)(Leaf.Center.X)*Tree.SizeScale2d, (float)Leaf.Center.Y * Tree.SizeScale2d) + DeltaPos + Leaf.Tree.Pos;
+            if (Pos.MagSq() > Form1.ArenaRadius * Form1.ArenaRadius)
+            {
+                float R = Pos.Mag();
+                float S = Form1.ArenaRadius / (2*R-Form1.ArenaRadius);
+                Pos = Pos *=-S;
+
+            }
         }
         public void Update()
         {
-            Angle += AngleSpeed1;
-            Time += 1/Form1.fps;
-            if(Time>maxTime)
-            {
-                Tree T = new Tree(Pos, Parent.BranchAmount);
-                Form1.Trees.Add(T);
-                T.Hue = Parent.Hue+(float)(1 - Form1.Rand.NextDouble() * 2) * 0.03f;
-                T.FoodHue = Parent.FoodHue + (float)(1 - Form1.Rand.NextDouble() * 2) * 0.03f;
-                T.Hue = Clamp01(T.Hue);
-                T.FoodHue = Clamp01(T.FoodHue);
-                T.Col = Form1.ColorFromHue(T.Hue);
+            Pos += Vel;
+            Vel *= 0.5f;
+            SeedTimer += 1 / Form1.fps;
+            if(Dead)
                 Form1.Seeds.Remove(this);
-                foreach (var B in T.Branches)
+            if (SeedTimer>SeedTimerMax)
+            {
+                Tree Tree = new Tree(Parent, Pos)
                 {
-                    B.NextFood.Hue = T.FoodHue;
-                    B.NextFood.Col = Form1.ColorFromHue(T.FoodHue);
-                }
+                    Energy = StartEnergy
+
+                };
+                Form1.Trees.Add(Tree);
+                Form1.Seeds.Remove(this);
             }
-        }
-        float Clamp01(float x)
-        {
-            if (x > 1)
-                return 1;
-            else if (x < 0)
-                return 0;
-            else
-                return x;
         }
         public void Show(Draw D, float x, float y, float Zoom = 1)
         {
             float R = Radius * Zoom;
             float R2 = R * 2;
-            float R3 = R * 0.75f;
-            float R4 = R * 1.75f;
-            Matrix M = D.Graphics.Transform.Clone();
-            D.Graphics.TranslateTransform(x, y);
-            D.Graphics.RotateTransform(Angle);
-
-            PointF[] P = new PointF[]
-            {
-                new PointF(0,R3),
-                new PointF(R4,0),
-                new PointF(0,-R3),
-                new PointF(-R4,0),
-            };
-            D.Graphics.FillPolygon(Brushes.Brown,P);
-            D.Graphics.RotateTransform(-Angle * (1 + AngleSpeed2));
-            D.Graphics.FillPolygon(Brushes.Brown, P);
-            D.Graphics.FillEllipse(new SolidBrush(Col), -R, -R, R2, R2);
-            D.Graphics.Transform = M;
+            D.Graphics.FillEllipse(new SolidBrush(Col), x-R, y-R, R2, R2);
         }
     }
 }

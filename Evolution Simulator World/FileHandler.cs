@@ -162,7 +162,7 @@ namespace Evolution_Simulator_World
             using (Stream stream = File.Open(Path, FileMode.Create))
             {
                 var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                object[] O = new object[] { Form1.Creatures, Form1.Eggs, Form1.NewTrees, Form1.NewSeeds, Form1.Foods,Draw.CreatureGraph.Array,Draw.TreeGraph.Array};
+                object[] O = new object[] { Form1.Creatures, Form1.Eggs, Form1.Trees, Form1.Seeds,Draw.CreatureGraph.Array,Draw.TreeGraph.Array};
                 binaryFormatter.Serialize(stream, O);
             }
 
@@ -175,13 +175,12 @@ namespace Evolution_Simulator_World
                 object[] O = binaryFormatter.Deserialize(stream) as object[];
                 Form1.Creatures = O[0] as List<Creature>;
                 Form1.Eggs = O[1] as List<Egg>;
-                Form1.NewTrees = O[2] as List<NewTree>;
-                Form1.NewSeeds = O[3] as List<NewSeed>;
-                Form1.Foods = O[4] as List<Food>;
-                if (O.Length > 5)
+                Form1.Trees = O[2] as List<Tree>;
+                Form1.Seeds = O[3] as List<Seed>;
+                if (O.Length > 4)
                 {
-                    int[] CreatureGraph = O[5] as int[];
-                    int[] TreeGraph = O[6] as int[];
+                    int[] CreatureGraph = O[4] as int[];
+                    int[] TreeGraph = O[5] as int[];
                     Draw.ResetGraphs(CreatureGraph, TreeGraph);
                 }
             }

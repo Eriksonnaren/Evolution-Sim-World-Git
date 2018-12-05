@@ -33,7 +33,7 @@ namespace Evolution_Simulator_World
         public bool Dead { get; set; } = false;
         public string Name;
         float MaxSpeed;
-        public NewTree.Leaf.Flower Pollen;
+        public Tree.Leaf.Flower Pollen;
         //Eyes
         float EyeRadius=800;
         float EyeRadiusExtra=100;
@@ -54,8 +54,8 @@ namespace Evolution_Simulator_World
             public bool Seed;
             public float MaxEnergy;
             public Color Col;
-            public NewTree.Leaf.Flower Parent;
-            public Food(NewTree.Leaf.Flower Parent)
+            public Tree.Leaf.Flower Parent;
+            public Food(Tree.Leaf.Flower Parent)
             {
                 this.Parent = Parent;
                 Seed = Form1.Rand.NextDouble() < 0.6;
@@ -210,7 +210,7 @@ namespace Evolution_Simulator_World
                 if(EatenFood[0].Energy<=0.01f)
                 {
                     if (EatenFood[0].Seed)
-                        Form1.NewSeeds.Add(new NewSeed(EatenFood[0].Parent,Pos));
+                        Form1.Seeds.Add(new Seed(EatenFood[0].Parent,Pos));
                     EatenFood.RemoveAt(0);
 
                 }
@@ -381,7 +381,7 @@ namespace Evolution_Simulator_World
                             NearbyObjects.Add(C);
                         
                 }
-                foreach (var S in Form1.NewSeeds)
+                foreach (var S in Form1.Seeds)
                 {
                     if ((S.Pos - Pos).MagSq() < RR)
                         NearbyObjects.Add(S);
@@ -401,7 +401,7 @@ namespace Evolution_Simulator_World
                     if ((E.Pos - Pos).MagSq() < RR)
                         NearbyObjects.Add(E);
                 }
-                foreach (var T in Form1.NewTrees)
+                foreach (var T in Form1.Trees)
                 {
                     foreach (var F in T.GetAllFlowers())
                     {
@@ -517,7 +517,7 @@ namespace Evolution_Simulator_World
                             Fod.Vel -= Push * 2;
                         }
                     }*/
-                    else if (I is NewSeed S)
+                    else if (I is Seed S)
                     {
                         float R2 = S.Radius + MouthRadius * Radius;
                         if (!Extend && (S.Pos - (Pos + (MouthPos * Radius).Rot(AngleVector))).MagSq() < R2 * R2&&S.Edible)
@@ -533,7 +533,7 @@ namespace Evolution_Simulator_World
                             S.Vel -= Push * 2;
                         }
                     }
-                    else if (I is NewTree.Leaf.Flower F)
+                    else if (I is Tree.Leaf.Flower F)
                     {
                         if(F.Pollen !=null&&F.FruitDone)
                         {
@@ -568,7 +568,7 @@ namespace Evolution_Simulator_World
             C.Energy -= EnergyGain*4/3f;
             Energy += EnergyGain;
         }
-        void Eat(NewTree.Leaf.Flower Flower)
+        void Eat(Tree.Leaf.Flower Flower)
         {
             Flower.Leaf.CurrentFlower = null;
             EatenFood.Add(new Food(Flower));
