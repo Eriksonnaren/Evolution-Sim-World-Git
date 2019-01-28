@@ -162,7 +162,7 @@ namespace Evolution_Simulator_World
             using (Stream stream = File.Open(Path, FileMode.Create))
             {
                 var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                object[] O = new object[] { Form1.Creatures, Form1.Eggs, Form1.Trees, Form1.Seeds,Draw.CreatureGraph.Array,Draw.TreeGraph.Array};
+                object[] O = new object[] { UpdateWorld.Entities,Draw.CreatureGraph.Array,Draw.TreeGraph.Array};
                 binaryFormatter.Serialize(stream, O);
             }
 
@@ -173,24 +173,19 @@ namespace Evolution_Simulator_World
             {
                 var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
                 object[] O = binaryFormatter.Deserialize(stream) as object[];
-                Form1.Creatures = O[0] as List<Creature>;
-                Form1.Eggs = O[1] as List<Egg>;
-                Form1.Trees = O[2] as List<Tree>;
-                Form1.Seeds = O[3] as List<Seed>;
-                if (O.Length > 4)
-                {
-                    int[] CreatureGraph = O[4] as int[];
-                    int[] TreeGraph = O[5] as int[];
-                    Draw.ResetGraphs(CreatureGraph, TreeGraph);
-                }
+                UpdateWorld.Entities = O[0] as List<Entity>;
+                int[] CreatureGraph = O[1] as int[];
+                int[] TreeGraph = O[2] as int[];
+                Draw.ResetGraphs(CreatureGraph, TreeGraph);
             }
+            Form1.update.Reset();
             Draw.Families=FindFamilies();
             Draw.UpdateFamily = true;
         }
         List<Family> FindFamilies()
         {
             List<Family> Families=new List<Family>();
-            foreach (var C in Form1.Creatures)
+            foreach (var C in UpdateWorld.Entities.OfType<Creature>())
             {
                 if(C.Family!=null)
                 {

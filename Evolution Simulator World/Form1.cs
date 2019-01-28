@@ -13,11 +13,11 @@ namespace Evolution_Simulator_World
 {
     public partial class Form1 : Form
     {
-        public static float ArenaRadius = 10000;
-        public static List<Creature> Creatures = new List<Creature>();
-        public static List<Tree> Trees = new List<Tree>();
-        public static List<Seed> Seeds = new List<Seed>();
-        public static List<Egg> Eggs = new List<Egg>();
+        //public static float ArenaRadius = 10000;
+        //public static List<Creature> Creatures = new List<Creature>();
+        //public static List<Tree> Trees = new List<Tree>();
+        //public static List<Seed> Seeds = new List<Seed>();
+        //public static List<Egg> Eggs = new List<Egg>();
         public static Random Rand = new Random();
         BufferedGraphics BG;
         public static PictureBox PB;
@@ -31,7 +31,7 @@ namespace Evolution_Simulator_World
         static int SinAmount = 720;
         public static PointF MousePos;
         public PointF MousePosPrev;
-        public static float fps;
+        public const float fps=60;
         public static bool ManualControl = false;
         public static string StartPath=Application.StartupPath;
         public static List<Keys> HoldKeys = new List<Keys>();
@@ -52,9 +52,8 @@ namespace Evolution_Simulator_World
             BG = BufferedGraphicsManager.Current.Allocate(PB.CreateGraphics(), PB.DisplayRectangle);
             Draw = new Draw(BG.Graphics, PB.Size);
             
-            update = new UpdateWorld();
-            T.Interval = 20;
-            fps = 1000 / T.Interval;
+            
+            T.Interval = (int)(1000 / fps);
             T.Tick += T_Tick;
             KeyDown += Form1_KeyDown;
             KeyUp += Form1_KeyUp;
@@ -68,7 +67,8 @@ namespace Evolution_Simulator_World
                 SinArray[i] = (float)Math.Sin(angle);
                 CosArray[i] = (float)Math.Cos(angle);
             }
-            for (int i = 0; i < UpdateWorld.MinTrees; i++)
+            update = new UpdateWorld();
+            /*for (int i = 0; i < UpdateWorld.MinTrees; i++)
             {
                 float angle = Rand.Next(0, 360);
                 float Dist = Sqrt((float)Rand.NextDouble()) * (Form1.ArenaRadius - 200);
@@ -83,7 +83,7 @@ namespace Evolution_Simulator_World
                 float X = Cos(angle) * Dist;
                 float Y = Sin(angle) * Dist;
                 Creatures.Add(new Creature(new Vector(X, Y)));
-            }
+            }*/
             update.Reset();
             /*NewTree Tr = new NewTree(new Vector(0, 0));
             NewTrees.Add(Tr);
@@ -204,13 +204,23 @@ namespace Evolution_Simulator_World
         {
             if (!(Draw.MousePress()||FileHandler.MousePress()||Draw.SelectedFamily))
             {
-                Vector WorldPos = Draw.ScreenToWorld(MousePos.X, MousePos.Y);
-                Draw.Selected = Creatures.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
-                if (Draw.Selected == null)
-                    Draw.Selected = Trees.Find(x => x.PointOnTree(WorldPos));
-                Draw.SelectedCreature = Draw.Selected as Creature;
-                //Draw.SelectedTree = Draw.Selected as Tree;
+                Draw.ScreenToWorld(MousePos.X, MousePos.Y,out Vector V, out VectorI Chunk);
+                Draw.Selected = UpdateWorld.Entities.OfType<SelectableObject>().ToList().Find(
+                    x=> {
+                        Vector RelPos = UpdateWorld.GetRelativePosition(x.ChunkPos, x.Pos, Chunk, V);
+                        if (x is Tree T)
+                            if (T.PointOnTree(RelPos))
+                                return true;
+                        return RelPos.MagSq() < x.Radius * x.Radius * 4;
+                        });
                 ManualControl = false;
+                //Draw.Selected = Creatures.Find(x => (x.Pos - WorldPos).MagSq() < (x.Radius * x.Radius) * 4);
+
+                //if (Draw.Selected == null)
+                    //Draw.Selected = Trees.Find(x => x.PointOnTree(WorldPos));
+                //Draw.SelectedCreature = Draw.Selected as Creature;
+                //Draw.SelectedTree = Draw.Selected as Tree;
+                //ManualControl = false;
             }
         }
         private void Form1_KeyUp(object sender, KeyEventArgs e)
@@ -219,8 +229,10 @@ namespace Evolution_Simulator_World
         }
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
+            
             string S = ((char)e.KeyValue).ToString();
-            if(ModifierKeys == Keys.Shift)
+            //Console.WriteLine("Key:" + S);
+            if (ModifierKeys == Keys.Shift)
             {
                 S=S.ToUpper();
             }else

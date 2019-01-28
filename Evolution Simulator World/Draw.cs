@@ -11,13 +11,15 @@ namespace Evolution_Simulator_World
     {
         public Graphics Graphics;
         public PointF CameraPosition;
+        public Vector CameraPos2;
+        public VectorI CameraChunk;
         SizeF Size;
         public Draw3d Draw3D;
         public Rectangle Rect3D = new Rectangle(20, 100, 250, 300);
         readonly Bitmap Bm;
         public float Zoom = 1;
-        public Creature SelectedCreature;
-        public SelectableObject Selected;
+        //public Creature SelectedCreature;
+        public static SelectableObject Selected;
         public bool SelectedFamily;
         bool BlindMode = false;
         public bool EyeRings = false;
@@ -61,13 +63,20 @@ namespace Evolution_Simulator_World
         {
             return new PointF((x - CameraPosition.X) * Zoom, (y - CameraPosition.Y) * Zoom);
         }
+        public PointF WorldToScreen(VectorI Chunk,Vector Pos)
+        {
+            Vector V = UpdateWorld.GetRelativePosition(CameraChunk, CameraPos2, Chunk, Pos)*Zoom;
+            return new PointF(V.X, V.Y);
+        }
         public PointF WorldToScreen(Vector V)
         {
             return new PointF((V.X - CameraPosition.X) * Zoom, (V.Y - CameraPosition.Y) * Zoom);
         }
-        public Vector ScreenToWorld(float x, float y)
+        public void ScreenToWorld(float x, float y,out Vector V,out VectorI C)
         {
-            return new Vector((x - Size.Width / 2) / Zoom + CameraPosition.X, (y - Size.Height / 2) / Zoom + CameraPosition.Y);
+            V = new Vector((x-Form1.PB.Width/2) / Zoom + CameraPos2.X, (y- Form1.PB.Height/2) / Zoom + CameraPos2.Y);
+            C = CameraChunk;
+            UpdateWorld.ConstrainVectorInChunk(ref V, ref C);
         }
         public Draw(Graphics Graphics, SizeF Size)
         {
@@ -101,37 +110,34 @@ namespace Evolution_Simulator_World
         {
             if (Selected != null)
             {
-                if (Selected.Dead)
+                if (Selected.Dead&&!SelectedFamily)
                 {
                     Selected = null;
-                    SelectedCreature = null;
-                    SelectedFamily = false;
                 }
             }
             Draw3D.Graphics.Clear(Color.Gray);
             DrawWorld();
             DrawGUI();
+            /*Graphics.DrawString("Camera:" + CameraPos2.X.ToString("0.0") + "," + CameraPos2.Y.ToString("0"), Font, Brushes.Black, 20, 70);
+            Graphics.DrawString("Chunk:" + CameraChunk.X.ToString() + "," + CameraChunk.Y.ToString(), Font, Brushes.Black, 20,90);
+            Vector V;
+            VectorI C;
+            ScreenToWorld(Form1.MousePos.X, Form1.MousePos.Y,out V,out C);
 
+            Graphics.DrawString("Mouse:" + V.X.ToString("0.0") + "," + V.Y.ToString("0"), Font, Brushes.Black, 20, 110);
+            Graphics.DrawString("Chunk:" + C.X.ToString() + "," + C.Y.ToString(), Font, Brushes.Black, 20, 130);
 
+            PointF P = WorldToScreen(C, V);
+            Graphics.FillEllipse(Brushes.Blue,P.X-5, P.Y - 5,10,10);*/
         }
         void DrawWorld()
         {
-            Graphics.TranslateTransform(Size.Width / 2, Size.Height / 2);
-            float Zoom1 = 0.5f;
-            float Zoom2 = 0.01f;
-            if (Zoom < Zoom1)
-            {
-                float Rad = Form1.ArenaRadius * Zoom;
-                PointF Pos = WorldToScreen(0,0);
-                float F = (Zoom - Zoom1) / (Zoom2 - Zoom1);
-                if (F > 1)
-                    F = 1;
-                Graphics.DrawEllipse(new Pen(Color.FromArgb((int)(F*255),Color.Red),Rad/400),Pos.X-Rad,Pos.Y-Rad,Rad*2,Rad*2);
-            }
             if (Selected != null)
             {
-                if (Selected is Creature)
-                    SelectedCreature.Selected = true;
+                CameraPos2 = Selected.Pos;
+                CameraChunk = Selected.ChunkPos;
+                if (Selected is Creature C)
+                    C.Selected = true;
                 //if(Lock)
                 //Graphics.RotateTransform(-SelectedCreature.Angle-90);
                 CameraPosition = Selected.Pos.ToPoint();
@@ -141,7 +147,27 @@ namespace Evolution_Simulator_World
                     SelectedCreature.Show(this, P.X, P.Y, Zoom);
                 }*/
             }
-            if (SelectedCreature == null || !BlindMode)
+
+            Graphics.TranslateTransform(Size.Width / 2, Size.Height / 2);
+            VectorI ChunkOffset = new VectorI(UpdateWorld.ChunkAmount/2, UpdateWorld.ChunkAmount/2);
+            for (int i = 0; i < UpdateWorld.ChunkAmount; i++)
+            {
+                for (int j = 0; j < UpdateWorld.ChunkAmount; j++)
+                {
+                    PointF Pos = new PointF(
+                        ((i - ChunkOffset.X) * UpdateWorld.ChunkSize - CameraPos2.X) * Zoom,
+                        ((j - ChunkOffset.Y) * UpdateWorld.ChunkSize - CameraPos2.Y) * Zoom);
+                    Graphics.DrawString(
+                        ((i - ChunkOffset.X + CameraChunk.X + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount).ToString()+"\n"+ 
+                        ((j - ChunkOffset.Y + CameraChunk.Y + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount).ToString(), new Font("Arial Black",Zoom*20),Brushes.Black,Pos);
+                    Graphics.DrawRectangle(new Pen(Color.Black,1),
+                        Pos.X,
+                        Pos.Y,
+                        UpdateWorld.ChunkSize* Zoom, UpdateWorld.ChunkSize* Zoom);
+                }
+            }
+
+            /*if (SelectedCreature == null || !BlindMode)
             {
                 foreach (var E in Form1.Eggs)
                 {
@@ -170,6 +196,21 @@ namespace Evolution_Simulator_World
                     T.Show2D(this, P.X, P.Y, Zoom);
                 }
 
+            }*/
+            Font FontC = new Font("Arial Black", 15 * Zoom);
+            foreach (Tree T in UpdateWorld.Trees)
+            {
+                PointF P = WorldToScreen(T.ChunkPos, T.Pos);
+                T.ShowShadows(this, P.X, P.Y, Zoom);
+            }
+            foreach (Entity E in UpdateWorld.Entities)
+            {
+                PointF P = WorldToScreen(E.ChunkPos, E.Pos);
+                E.Show(this,P.X,P.Y,Zoom);
+                if (E is Creature C)
+                {
+                    Graphics.DrawString(C.Name, FontC, Brushes.Black, P.X, P.Y - C.Radius * Zoom * 1.5f, SF);
+                }
             }
             Graphics.ResetTransform();
         }
@@ -177,9 +218,9 @@ namespace Evolution_Simulator_World
         {
             if (UpdateFamily)
                 UpdateFamilyList();
-            CreatureText.Text = "Creatures:" + Form1.Creatures.Count.ToString();
-            TreeText.Text = "Trees:" + Form1.Trees.Count.ToString();
-            if (SelectedCreature != null)
+            CreatureText.Text = "Creatures:" + UpdateWorld.Creatures.Count.ToString();
+            TreeText.Text = "Trees:" + UpdateWorld.Trees.Count.ToString();
+            if (Selected is Creature SelectedCreature)
             {
                 Rectangle BrainRect = new Rectangle(20, 70, 190, 350);
                 //DrawGuiBox(Brushes.LightGray, BrainRect);
@@ -249,7 +290,7 @@ namespace Evolution_Simulator_World
                 {
                     E.Show(this);
                     if (i >= 0)
-                        E.Text = Families[i].Root.Name + ":" + Families[i].CreaturesAlive.ToString();
+                        E.Text = Families[i].Root.Name + ":" + Families[i].FamilyMembersAlive.ToString();
                     i++;
                 }
             }
@@ -265,8 +306,8 @@ namespace Evolution_Simulator_World
 
         public bool MousePress()
         {
-            if (SelectedCreature != null)
-                if (SelectedCreature.Family != null)
+            if (Selected is Creature C)
+                if (C.Family != null)
                 {
                     if (GetPressButton(FamilyButton))
                         if (FamilyButton.mouseDown())
@@ -301,8 +342,10 @@ namespace Evolution_Simulator_World
             }
             else
             {
-                CameraPosition.X -= Dx / Zoom;
-                CameraPosition.Y -= Dy / Zoom;
+                //CameraPosition.X -= Dx / Zoom;
+                //CameraPosition.Y -= Dy / Zoom;
+                CameraPos2 -= new Vector(Dx, Dy) / Zoom;
+                UpdateWorld.ConstrainVectorInChunk(ref CameraPos2, ref CameraChunk);
             }
         }
         bool GetPressButton(GuiElement E)
@@ -367,7 +410,7 @@ namespace Evolution_Simulator_World
                 FamilyButtons.Add(new GuiElement(GuiElement.Type.TextBox, new Rectangle(X, Y, 140, 30), "Families:"));
                 foreach (var F in Families)
                 {
-                    GuiElement Button = new GuiElement(GuiElement.Type.Button, new Rectangle(X, Y + dy * i, 140, 30), F.Root.Name + ":" + F.CreaturesAlive.ToString());
+                    GuiElement Button = new GuiElement(GuiElement.Type.Button, new Rectangle(X, Y + dy * i, 140, 30), F.Root.Name + ":" + F.FamilyMembersAlive.ToString());
                     FamilyButtons.Add(Button);
                     Button.ButtonEvent = FamilyButtonEvent;
                     i++;
@@ -385,7 +428,7 @@ namespace Evolution_Simulator_World
             var G = sender as GuiElement;
             int id = FamilyButtons.IndexOf(G);
             var F = Families[id - 1];
-            SelectedCreature = F.Root;
+            Selected = F.Root;
             SelectedFamily = true;
         }
         void BlindButtonEvent(object sender, EventArgs e)

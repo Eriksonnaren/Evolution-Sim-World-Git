@@ -10,34 +10,35 @@ namespace Evolution_Simulator_World
     [Serializable]
     public class Family
     {
-        List<List<Creature>> FamilyTree;
-        public Creature Root;
-        public Creature Common_Ancestor;
-        Creature Hover;
-        List<Creature> HoverFamily;
+        List<List<FamilyMember>> FamilyTree;
+        public FamilyMember Root;
+        public FamilyMember Common_Ancestor;
+        FamilyMember Hover;
+        List<FamilyMember> HoverFamily;
         float ScrollValue = 0;
         float StartScrollValue = 0;
         float MouseStartY = 0;
         bool ScrollHold = false;
-        public int CreaturesAlive = 0;
+        public int FamilyMembersAlive = 0;
+        float CircleRadius = 40;
 
-        public Family(Creature Root)
+        public Family(FamilyMember Root)
         {
             this.Root = Root;
             Common_Ancestor = Root;
-            FamilyTree = new List<List<Creature>>() { new List<Creature>() { Root} };
-            CreaturesAlive = Root.Dead?0:1;
+            FamilyTree = new List<List<FamilyMember>>() { new List<FamilyMember>() { Root} };
+            FamilyMembersAlive = Root.Dead?0:1;
             Draw.Families.Add(this);
             Draw.UpdateFamily=true;
         }
-        public void Add(Creature Parent, Creature Children)
+        public void Add(FamilyMember Parent, FamilyMember Children)
         {
-            CreaturesAlive++;
+            FamilyMembersAlive++;
             Children.Family = this;
             Children.Generation = Parent.Generation + 1;
             if (FamilyTree.Count+Common_Ancestor.Generation <= Children.Generation)
             {
-                FamilyTree.Add(new List<Creature>() { Children });
+                FamilyTree.Add(new List<FamilyMember>() { Children });
                 Children.FamilyPos = 0;
             }else
             {
@@ -70,7 +71,13 @@ namespace Evolution_Simulator_World
                 }
             }
         }
-        public void Remove(Creature Cre)
+        public void Remove(FamilyMember Cre)
+        {
+            if (Cre.Dead)
+                FamilyMembersAlive--;
+            RemoveRecursive(Cre);
+        }
+        void RemoveRecursive(FamilyMember Cre)
         {
             if (Cre.Children.Count == 0)
             {
@@ -83,12 +90,13 @@ namespace Evolution_Simulator_World
                     if (Cre.Parents.Count > 0)
                         if (Cre.Parents[0].Dead)
                         {
-                            Remove(Cre.Parents[0]);
+                        RemoveRecursive(Cre.Parents[0]);
                         }
                     Cre.Parents.Clear();
                     int id = Cre.Generation - Common_Ancestor.Generation;
                     if (id >= 0)
                     {
+                        
                         FamilyTree[id].RemoveAt(Cre.FamilyPos);
                         for (int i = Cre.FamilyPos; i < FamilyTree[id].Count; i++)
                         {
@@ -117,7 +125,7 @@ namespace Evolution_Simulator_World
                 }
                 FamilyTree.RemoveAt(0);
                 if (Common_Ancestor.Dead)
-                    Remove(Common_Ancestor);
+                    RemoveRecursive(Common_Ancestor);
 
             }
         }
@@ -158,7 +166,7 @@ namespace Evolution_Simulator_World
                 for (int j = 0; j < FamilyTree[FamId].Count; j++)
                 {
                     int X = StartX + j * dx;
-                    Creature Current = FamilyTree[FamId][j];
+                    FamilyMember Current = FamilyTree[FamId][j];
                     bool inHoverFamily = false;
                     if (HoverFamily != null && i-Offset < HoverFamily.Count)
                         inHoverFamily = HoverFamily[FamId].FamilyPos == j;
@@ -180,7 +188,7 @@ namespace Evolution_Simulator_World
                     }
                     if (!Current.Dead||inHoverFamily||Current.Selected)
                     {
-                        float R = Current.Radius * Zoom * 1.5f;
+                        float R = CircleRadius * Zoom * 1.5f;
                         Color Col = Color.DarkOrange;
                         if (inHoverFamily)
                             Col = Color.Green;
@@ -189,20 +197,20 @@ namespace Evolution_Simulator_World
                         else
                             D.Graphics.DrawEllipse(new Pen(Col,2), X - R, Y - R, R * 2, R * 2);
                     }
-                    if (Current.IsEgg != null)
-                    {
-                        Current.IsEgg.Show(D, X, Y, Zoom);
-                    }
-                    else
-                    {
+                    //if (Current.IsEgg != null)
+                    //{
+                    //    Current.IsEgg.Show(D, X, Y, Zoom);
+                    //}
+                    //else
+                    //{
                         Current.Show(D, X, Y, Zoom);
-                    }
-                        if (Intersect(X, Y, Current.Radius * Zoom*1.5f))
+                    //}
+                        if (Intersect(X, Y, CircleRadius * Zoom*1.5f)&& Current.Name.Length>0)
                         {
-                        D.Graphics.DrawString(Current.Name, D.Font, Brushes.Black, X, Y - Current.Radius * Zoom * 1.5f, D.SF);
-                        Hover = Current;
+                            Hover = Current;
                             MouseOver = true;
                         }
+                    D.Graphics.DrawString(Current.Name, D.Font, Brushes.Black, X, Y - CircleRadius * Zoom * 1.5f, D.SF);
                 }
                 Width = NextWidth;
                 StartX = NextStartX;
@@ -215,7 +223,7 @@ namespace Evolution_Simulator_World
             }
             else
             {
-                HoverFamily = new List<Creature>() { Hover };
+                HoverFamily = new List<FamilyMember>() { Hover };
                 int CurrentGen=Hover.Generation-Common_Ancestor.Generation;
                 int CurrentPos=Hover.FamilyPos;
                 while(CurrentGen>0&&FamilyTree[CurrentGen][CurrentPos].Parents.Count>0)
@@ -225,7 +233,7 @@ namespace Evolution_Simulator_World
                     HoverFamily.Insert(0,FamilyTree[CurrentGen][CurrentPos]);
                 }
                 if (Form1.MouseHold)
-                    D.Selected = D.SelectedCreature = Hover;
+                    Draw.Selected  = Hover;
             }
             ShowScroll(D);
         }

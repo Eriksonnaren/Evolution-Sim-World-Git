@@ -9,15 +9,22 @@ using System.Drawing.Drawing2D;
 namespace Evolution_Simulator_World
 {
     [Serializable]
-    public class Egg:BaseObject
+    public class Egg:MovingEntity,SelectableObject,CollideMove, Visible
     {
+        public int DrawLayer { get; } = 0;
         public List<Creature> Parents;
         public Vector Pos { get; set; }
+        public VectorI ChunkPos { get; set; }
+        public Color Col { get; set; }
+        public float Radius { get; } = 20;
+        public float Hue { get; set; }
+        public Vector Vel { get; set; }
+        public float Friction { get; } = 0.1f;
+        public bool Dead { get; set; }
+        public float Mass { get; } = 5;
+        public bool EnableCollide { get; set; } = true;
         float Time;
         float maxTime = 10;
-        public float Radius { get { return 20; } }
-        public Color Col { get; set; }
-        public float Hue { get; set; }
         float Angle = 0;
         Creature Child;
         public Egg(Creature Parent)
@@ -26,7 +33,7 @@ namespace Evolution_Simulator_World
             Col = Form1.ColorFromHue(Hue);
             Pos = Parent.Pos;
             Parents = new List<Creature> { Parent };
-            Child = new Creature(Pos);
+            Child = new Creature();
             Child.IsEgg = this;
             Child.Name = "";
             if (Parents[0].Family == null)
@@ -35,7 +42,7 @@ namespace Evolution_Simulator_World
             }
             Parents[0].Family.Add(Parents[0], Child);
 
-            Child.Parents = new List<Creature> { Parent };
+            Child.Parents = new List<FamilyMember> { Parent };
 
             foreach (Creature C in Parents)
             {
@@ -105,9 +112,13 @@ namespace Evolution_Simulator_World
             Child.EggHue = Parents[0].EggHue;
             Child.Mutate();
 
+            UpdateWorld.AddEntity(Child, Pos, ChunkPos);
+            UpdateWorld.RemoveEntity(this);
+        }
+
+        public void OnCollision(CollideTrigger Other, Vector RelVector)
+        {
             
-            Form1.Creatures.Add(Child);
-            Form1.Eggs.Remove(this);
         }
     }
 }

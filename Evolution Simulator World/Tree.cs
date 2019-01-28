@@ -9,12 +9,14 @@ using System.Drawing.Drawing2D;
 namespace Evolution_Simulator_World
 {
     [Serializable]
-    public class Tree : BaseObject,SelectableObject
+    public class Tree : SelectableObject,CollideStatic,Visible
     {
         //Tree
+        public int DrawLayer { get; } = 10;
         public Vector Pos { get; set; }
+        public VectorI ChunkPos { get; set; }
         public Branch Root;
-        public float Radius { get; set; } = 50;
+        public float Radius { get; } = 20;
         public float Hue { get; set; }
         public Color Col { get; set; }
         public List<Branch> Branches = new List<Branch>();
@@ -25,9 +27,13 @@ namespace Evolution_Simulator_World
         public const float SizeScale2d = 120;
         public float TotalHeight;
         public int Generation;
+        readonly Color BranchColor;
+        readonly Color LeafColor;
+        readonly Vector3 ShadowProjectLine = new Vector3(0.5, 0.5, -1);
 
         //Energy
         public float Energy;
+        //public UpdateWorld.ResourceContainer ResourceContainer;
         public bool Dead { get; set; } = false;
         Vector3 Sun;
         const float NeuronEnergyScale = 100;
@@ -62,9 +68,13 @@ namespace Evolution_Simulator_World
         public readonly float FruitHue;
         public readonly Color FlowerColor = Color.Blue;
         public readonly Color FruitColor=Color.OrangeRed;
-        
-        public Tree(Vector Pos,float StartEnergy=5)
+        public Tree(Vector Pos, VectorI ChunkPos, float StartEnergy=5)
         {
+            Col = Color.SaddleBrown;
+            LeafColor = Color.ForestGreen;
+            BranchColor = Color.SaddleBrown;
+            this.Pos = Pos;
+            this.ChunkPos = ChunkPos;
             Timer = Form1.Rand.Next(MaxTimer);
             Energy = StartEnergy;
             //Inputs: TreeAge,TreeEnergy,IsBranch,Layer,ChildBranches,ChildLeaves,LocalEnergy(if branch sum of all children),LocalAge,HasFlower,FruitRatio
@@ -83,8 +93,8 @@ namespace Evolution_Simulator_World
             {
                 N.WeightMatrix[1][i][9] = 0;
             }*/
-            
-            N.WeightMatrix[N.ToIndex(0,3,0)] = 0.1f;
+
+            /*N.WeightMatrix[N.ToIndex(0,3,0)] = 0.1f;
             N.WeightMatrix[N.ToIndex(0, 1, 0)] = 2;
             N.WeightMatrix[N.ToIndex(0, 10, 0)] = -2;
             N.WeightMatrix[N.ToIndex(1, 0, 9)] = 1;
@@ -103,18 +113,20 @@ namespace Evolution_Simulator_World
 
             //N.WeightMatrix[1][8][9] = -1f;
 
-            N.Mutate(MutationRate);
-
-
-            this.Pos = Pos;
+            N.Mutate(MutationRate);*/
+            N.GenerateRandom(-2,2);
+            
             Root = new Branch(this, null, 3, 0, 0);
             AddLeaf(Root, new Leaf(Root, 40, Form1.Rand.Next(0, 360), 0));
             Branches.Add(Root);
-            Col = Color.ForestGreen;
+            
             UpdateArea();
         }
-        public Tree(Tree Parent,Vector Pos)
+        public Tree(Tree Parent,Vector Pos,VectorI ChunkPos)
         {
+            Col = Color.SaddleBrown;
+            LeafColor = Color.ForestGreen;
+            BranchColor = Color.SaddleBrown;
             Timer = Form1.Rand.Next(MaxTimer);
             Generation = Parent.Generation+1;
             NeuralNetwork = new FeedForwardNetwork(Parent.NeuralNetwork as FeedForwardNetwork);
@@ -126,6 +138,7 @@ namespace Evolution_Simulator_World
 
             Inputs = new float[Parent.Inputs.Length];
             this.Pos = Pos;
+            this.ChunkPos = ChunkPos;
             Root = new Branch(this, null, 3, 0, Form1.Rand.Next(0, 360));
             AddLeaf(Root, new Leaf(Root, 40, Form1.Rand.Next(0, 360), 0));
 
@@ -153,21 +166,31 @@ namespace Evolution_Simulator_World
         {
             
             AreaMultiplier = 1;
-            foreach (Tree T in Form1.Trees)
+            for (int i = -1; i <= 1; i++)
             {
-                if (T != this)
+                for (int j = -1; j <= 1; j++)
                 {
-                    float dist = (Pos - T.Pos).Mag();
-                    if (dist < T.EnergyRadius + EnergyRadius && T.EnergyRadius > 0)//if their energy circles are touching
+                    foreach (var Entity in UpdateWorld.Chunks
+                        [(ChunkPos.X + i + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount]
+                        [(ChunkPos.Y + j + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount].Entities)
                     {
-                        
-                        float A = GetCoveredArea(EnergyRadius, T.EnergyRadius, dist);
-                        float M1 = 1 - (A / ((float)Math.PI * (EnergyRadius * EnergyRadius))) / 2;
-                        AreaMultiplier *= M1;
-                        float M2 = 1 - (A / ((float)Math.PI * (T.EnergyRadius * T.EnergyRadius))) / 2;
-                        T.AreaMultiplier *= M2;
-                        NearbyTrees.Add(T,M1);
-                        T.NearbyTrees.Add(this, M2);
+                        {
+                            if (Entity is Tree T && Entity != this)
+                            {
+                                float dist = UpdateWorld.GetRelativePosition(this, T).Mag();
+                                if (dist < T.EnergyRadius + EnergyRadius && T.EnergyRadius > 0)//if their energy circles are touching
+                                {
+
+                                    float A = GetCoveredArea(EnergyRadius, T.EnergyRadius, dist);
+                                    float M1 = 1 - (A / ((float)Math.PI * (EnergyRadius * EnergyRadius))) / 2;
+                                    AreaMultiplier *= M1;
+                                    float M2 = 1 - (A / ((float)Math.PI * (T.EnergyRadius * T.EnergyRadius))) / 2;
+                                    T.AreaMultiplier *= M2;
+                                    NearbyTrees.Add(T, M1);
+                                    T.NearbyTrees.Add(this, M2);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -204,6 +227,11 @@ namespace Evolution_Simulator_World
                 T.Key.NearbyTrees.Remove(this);
             }
             NearbyTrees.Clear();
+            UpdateWorld.RemoveEntity(this);
+            for (int i = Leaves.Count-1; i >= 0; i--)
+            {
+                Leaves[i].Kill();
+            }
         }
         void LimitMax(ref float Input,float L)
         {
@@ -215,14 +243,22 @@ namespace Evolution_Simulator_World
             List<Tree> NearbyList = new List<Tree>() { this };
             double SunSlope = Sun.Z*Sun.Z/(Sun.X*Sun.X+Sun.Y*Sun.Y+1);
             float S = SizeScale2d * SizeScale2d;
-            foreach (var T in Form1.Trees)
+            for (int i = -1; i <= 1; i++)
             {
-                if (T != this)
+                for (int j = -1; j <= 1; j++)
                 {
-                    Vector DPos = T.Pos - Pos;
-                    if (T.TotalHeight * T.TotalHeight * S > SunSlope * DPos.MagSq())
+                    foreach (var Entity in UpdateWorld.Chunks
+                        [(ChunkPos.X + i + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount]
+                        [(ChunkPos.Y + j + UpdateWorld.ChunkAmount) % UpdateWorld.ChunkAmount].Entities)
                     {
-                        NearbyList.Add(T);
+                        if(Entity is Tree T&&Entity!=this)
+                        {
+                            Vector DPos = T.Pos - Pos;
+                            if (T.TotalHeight * T.TotalHeight * S > SunSlope * DPos.MagSq())
+                            {
+                                NearbyList.Add(T);
+                            }
+                        }
                     }
                 }
             }
@@ -249,7 +285,7 @@ namespace Evolution_Simulator_World
         }
         public void AddLeaf(Branch B,Leaf L)
         {
-            B.Leaves.Add(L,"");
+            B.AddLeaf(L);
             Leaves.Add(L);
         }
         public bool PointOnTree(Vector P)
@@ -264,11 +300,11 @@ namespace Evolution_Simulator_World
                 if (L.PointInLeaf(P))
                     return true;
             }
-            if ((P - Pos).MagSq() < 5000)
+            if (P.MagSq() < 5000)
                 return true;
             return false;
         }
-        public List<BaseObject> GetAllFlowers()
+        /*public List<BaseObject> GetAllFlowers()
         {
             List<BaseObject> Objects = new List<BaseObject>();
             foreach (Leaf L in Leaves)
@@ -277,19 +313,67 @@ namespace Evolution_Simulator_World
                     Objects.Add(L.CurrentFlower);
             }
             return Objects;
-        }
-        public void Show2D(Draw D, float X, float Y, float Zoom = 1)
+        }*/
+        public void ShowShadows(Draw D, float X, float Y, float Zoom = 1)
         {
+            byte B = 50;
+            Color Color = Color.FromArgb(150, B,B,B);
+            Pen pen = new Pen(Color)
+            {
+                EndCap = LineCap.Round,
+                StartCap = LineCap.Round
+            };
+            foreach (Branch branch in Branches)
+            {
+                Vector V1 = GetShadowProjection(branch.Base);
+                Vector V2 = GetShadowProjection(branch.Tip);
+                float Scale = SizeScale2d * Zoom;
+                pen.Width = branch.Width * Scale;
+                    D.Graphics.DrawLine(pen, X + V1.X * Scale, Y + V1.Y * Scale, X + V2.X * Scale, Y + V2.Y * Scale);
+            }
+            foreach (Leaf leaf in Leaves)
+            {
+                float Scale = SizeScale2d * Zoom;
+                PointF[] Points = new PointF[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector V = GetShadowProjection(leaf.Vertecies[i]);
+                    Points[i] = new PointF((X + V.X * Scale), (Y + V.Y * Scale));
+                }
+                D.Graphics.FillPolygon(new SolidBrush(Color), Points);
+            }
+        }
+        Vector GetShadowProjection(Vector3 V)
+        {
+            #region Math
+            /* Landing = V+Project*L
+             * Landing.Z = 0
+             * 0 = V.Z+Project.Z*L
+             * L = -V.Z/Project.Z
+           */
+            #endregion
+            double L = -V.Z / ShadowProjectLine.Z;
+            Vector3 Landing = V + ShadowProjectLine * L;
+            return new Vector((float)Landing.X, (float)Landing.Y);
+        }
+        public void Show(Draw D, float X, float Y, float Zoom = 1)
+        {
+            //ShowShadows(D, X, Y, Zoom);
             Root.Show2D(D, X, Y, Zoom);
         }
         public void ShowSelected(Draw D,Draw3d D3)
         {
             Root.Show3D(D3,Sun);
         }
+        public void OnCollision(CollideTrigger Other, Vector RelVector)
+        {
+
+        }
         [Serializable]
         public class Branch
         {
-            public SortedList<Leaf,string> Leaves = new SortedList<Leaf, string>();
+            //public SortedList<Leaf,string> Leaves = new SortedList<Leaf, string>();
+            public List<Leaf> Leaves=new List<Leaf>();
             public List<Branch> Branches=new List<Branch>();
             readonly float Pitch;
             readonly float Yaw;
@@ -344,6 +428,24 @@ namespace Evolution_Simulator_World
                 if (Tip.Z > Tree.TotalHeight)
                     Tree.TotalHeight = (float)Tip.Z;
             }
+            public void AddLeaf(Leaf L)
+            {
+                int id = 0;
+                while (true)
+                {
+                    if(id>= Leaves.Count)
+                    {
+                        Leaves.Add(L);
+                        return;
+                    }
+                    if(Leaves[id].Center.Z>L.Center.Z)
+                    {
+                        Leaves.Insert(id,L);
+                        return;
+                    }
+                    id++;
+                }
+            }
             public void Update(NeuralNetwork Network)
             {
                 Age++;
@@ -392,7 +494,7 @@ namespace Evolution_Simulator_World
                 {
                     LocalEnergy += B.GetLocalEnergy();
                 }
-                foreach (var L in Leaves.Keys)
+                foreach (var L in Leaves)
                 {
                     LocalEnergy += L.EnergyFlow;
                 }
@@ -400,8 +502,8 @@ namespace Evolution_Simulator_World
             }
             public bool PointOnBranch(Vector V)
             {
-                Vector V1 = new Vector(Tip* SizeScale2d) + Tree.Pos;
-                Vector V2 = new Vector(Base* SizeScale2d) + Tree.Pos;
+                Vector V1 = new Vector(Tip* SizeScale2d);
+                Vector V2 = new Vector(Base* SizeScale2d);
                 float T = (V1 - V2) * (V - V2)/ (V1 - V2).MagSq();
                 Vector Point = Vector.Lerp(V1, V2, T);
                 float Length2 = (V - Point).MagSq();
@@ -410,16 +512,16 @@ namespace Evolution_Simulator_World
             }
             public void Show2D(Draw D, float X, float Y, float Zoom)
             {
-                Pen pen = new Pen(Color.SaddleBrown)
+                Pen pen = new Pen(Tree.BranchColor)
                 {
-                    EndCap = System.Drawing.Drawing2D.LineCap.Round,
-                    StartCap = System.Drawing.Drawing2D.LineCap.Round
+                    EndCap = LineCap.Round,
+                    StartCap = LineCap.Round
                 };
                 foreach (var I in Branches)
                 {
                     I.Show2D(D, X, Y, Zoom);
                 }
-                foreach (var L in Leaves.Keys)
+                foreach (var L in Leaves)
                 {
                     L.Show2D(D, X, Y, Zoom);
                 }
@@ -439,17 +541,19 @@ namespace Evolution_Simulator_World
                 {
                     I.Show3D(D,Sun);
                 }
-                foreach (var I in Leaves.Keys)
+                foreach (var I in Leaves)
                 {
                     I.Show3D(D);
                     //(Sun * 15*5).Show(I.Center*15,D,Color.Orange,3);
                 }
-                D.addLine(Color.SaddleBrown, Width * SizeScale3d, Base * SizeScale3d, Tip * SizeScale3d);
+                D.addLine(Tree.BranchColor, Width * SizeScale3d, Base * SizeScale3d, Tip * SizeScale3d);
             }
         }
         [Serializable]
         public class Leaf:IComparable<Leaf>
         {
+            public Vector Pos;
+            public VectorI ChunkPos;
             readonly float Pitch;
             readonly float Yaw;
             readonly float Roll;
@@ -457,13 +561,14 @@ namespace Evolution_Simulator_World
             public Vector3 Tip1;
             public Vector3 Tip2;
             public Vector3 Center;
+            public Vector3[] Vertecies;
             Vector3 RayPoint;
             Vector3 Norm;
             Matrix3 RotMatrix;
             readonly Branch Parent;
             public readonly Tree Tree;
             public float EnergyFlow=0.5f;
-            Color Col=Color.ForestGreen;
+            Color Col;
             int Age;
             Seed CurrentSeed;
             public Flower CurrentFlower;
@@ -489,6 +594,13 @@ namespace Evolution_Simulator_World
                 Center = (Base + Tip1 + Tip2) / 3;
                 if (Center.Z > Tree.TotalHeight)
                     Tree.TotalHeight = (float)Center.Z;
+                Vector Pos = new Vector((float)(Center.X) * SizeScale2d, (float)Center.Y * SizeScale2d) + Tree.Pos;
+                VectorI ChunkPos = Tree.ChunkPos;
+                UpdateWorld.ConstrainVectorInChunk(ref Pos, ref ChunkPos);
+                this.Pos = Pos;
+                this.ChunkPos = ChunkPos;
+                Col = Tree.LeafColor;
+                Vertecies = new Vector3[] {Base,Tip1,Tip2 };
             }
             float Sign(Vector p1, Vector p2, Vector p3)
             {
@@ -497,9 +609,9 @@ namespace Evolution_Simulator_World
 
             public bool PointInLeaf(Vector pt)
             {
-                Vector v1 = new Vector(Base * SizeScale2d) + Tree.Pos;
-                Vector v2 = new Vector(Tip1 * SizeScale2d) + Tree.Pos;
-                Vector v3 = new Vector(Tip2 * SizeScale2d) + Tree.Pos;
+                Vector v1 = new Vector(Base * SizeScale2d);
+                Vector v2 = new Vector(Tip1 * SizeScale2d);
+                Vector v3 = new Vector(Tip2 * SizeScale2d);
                 bool b1, b2, b3;
                 b1 = Sign(pt, v1, v2) < 0.0f;
                 b2 = Sign(pt, v2, v3) < 0.0f;
@@ -516,14 +628,14 @@ namespace Evolution_Simulator_World
                     new PointF((float)(X+Tip1.X*Scale),(float)(Y+Tip1.Y*Scale)),
                     new PointF((float)(X+Tip2.X*Scale),(float)(Y+Tip2.Y*Scale)),
                 };
-                D.Graphics.FillPolygon(new SolidBrush(Col),Points);
+                D.Graphics.FillPolygon(new SolidBrush(Color.FromArgb(200,Col)),Points);
                 if(CurrentSeed!=null)
                 {
-                    CurrentSeed.Show(D,(float)(X+Center.X*Scale), (float)(Y + Center.Y * Scale),Zoom);
+                    //CurrentSeed.Show(D,(float)(X+Center.X*Scale), (float)(Y + Center.Y * Scale),Zoom);
                 }
                 if(CurrentFlower!=null)
                 {
-                    CurrentFlower.Show(D, (float)(X + Center.X * Scale), (float)(Y + Center.Y * Scale), Zoom);
+                    //CurrentFlower.Show(D, (float)(X + Center.X * Scale), (float)(Y + Center.Y * Scale), Zoom);
                 }
             }
             public void Show3D(Draw3d D)
@@ -551,8 +663,8 @@ namespace Evolution_Simulator_World
                     SeedTimer += Tree.MaxTimer / Form1.fps;
                     if(SeedTimer>SeedTimerMax)
                     {
-                        Form1.Seeds.Add(CurrentSeed);
                         CurrentSeed.Fall();
+                        //UpdateWorld.AddEntity(CurrentSeed, CurrentSeed.Pos, CurrentSeed.ChunkPos);
                         CurrentSeed = null;
                     }
                 }
@@ -584,8 +696,7 @@ namespace Evolution_Simulator_World
                 if (Outputs[0] < -1)
                 {
                     Tree.Energy += LeafCost / 2;
-                    Tree.Leaves.Remove(this);
-                    Parent.Leaves.Remove(this);
+                    Kill();
                 }
                 else
                 {
@@ -595,7 +706,7 @@ namespace Evolution_Simulator_World
                         {
                             Tree.Energy -= SeedCost;
                             CurrentSeed = new Seed(Tree,this);
-
+                            UpdateWorld.AddEntity(CurrentSeed,CurrentSeed.Pos,CurrentSeed.ChunkPos);
                         }
                         else
                         {
@@ -608,6 +719,7 @@ namespace Evolution_Simulator_World
                         {
                             Tree.Energy -= FlowerCost;
                             CurrentFlower = new Flower(this);
+                            UpdateWorld.AddEntity(CurrentFlower, Pos, ChunkPos);
                         }
                         else
                         {
@@ -615,6 +727,18 @@ namespace Evolution_Simulator_World
                         }
                     }
                 }
+            }
+            public void Kill()
+            {
+                Parent.Leaves.Remove(this);
+                if (CurrentFlower != null)
+                    UpdateWorld.RemoveEntity(CurrentFlower);
+                if(CurrentSeed !=null)
+                    UpdateWorld.RemoveEntity(CurrentSeed);
+                Tree.Leaves.Remove(this);
+                if (Tree.Leaves.Count == 0)
+                    Tree.Kill();
+                
             }
             public float GetSunEnergy(Vector3 SunVector,List<Tree> Trees)
             {
@@ -638,7 +762,7 @@ namespace Evolution_Simulator_World
             void AverageEnergy(float NextEnergy)
             {
                 EnergyFlow = EnergyFlow + (NextEnergy-EnergyFlow) / 5;
-                Col = Color.Red.Lerp(Color.ForestGreen,Math.Min(EnergyFlow*2,1));
+                Col = Color.Red.Lerp(Tree.LeafColor,Math.Min(EnergyFlow*2,1));
             }
             public bool TreeBlockSun(Vector3 SunVector,Tree Tree)
             {
@@ -722,12 +846,18 @@ namespace Evolution_Simulator_World
             }
 
             [Serializable]
-            public class Flower:BaseObject
+            public class Flower:Visible,CollideMove
             {
+                public int DrawLayer { get; } = 0;
                 public Vector Pos { get; set; }
+                public VectorI ChunkPos { get; set; }
                 public Color Col { get; set; }
                 public float Hue { get; set; }
                 public float Radius { get; set; }
+                public float Mass { get; set; } = 10;
+                public bool EnableCollide { get; set; }
+                public Vector Vel { get; set; }
+                public float Friction { get; set; } = 0.1f;
                 public Leaf Leaf;
                 float Angle;
                 public Flower Pollen;
@@ -736,7 +866,8 @@ namespace Evolution_Simulator_World
                 float SpoilTimer = 0;
                 public Flower(Leaf Leaf)
                 {
-                    Pos = Leaf.Tree.Pos + new Vector(Leaf.Center) * SizeScale2d;
+                    Pos = Leaf.Pos;
+                    ChunkPos = Leaf.ChunkPos;
                     Hue = 0.85f;
                     Col = Leaf.Tree.FlowerColor;
                     Radius = 10;
@@ -761,6 +892,10 @@ namespace Evolution_Simulator_World
                             Leaf.Tree.Energy -= PollenCost;
                         }
                     }
+                }
+                public void Update()
+                {
+
                 }
                 public void Update(float FruitRate)
                 {
@@ -803,7 +938,6 @@ namespace Evolution_Simulator_World
                     Rad1 *= Lerp(1, 1.5f, Ratio);
                     D.Graphics.FillEllipse(new SolidBrush(Col), -Rad1, -Rad1, 2 * Rad1, 2 * Rad1);
                     D.Graphics.Transform = M;
-
                 }
                 public void Show3d(Draw3d D3)
                 {
@@ -813,6 +947,11 @@ namespace Evolution_Simulator_World
                     D3.Polygons.AddRange(Polys);
                 }
                 public float Lerp(float A, float B, float T) => A + (B - A) * T;
+
+                public void OnCollision(CollideTrigger Other, Vector RelVector)
+                {
+                    
+                }
             }
         }
     }

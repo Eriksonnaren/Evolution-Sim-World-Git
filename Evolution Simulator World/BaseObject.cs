@@ -7,17 +7,11 @@ using System.Drawing;
 
 namespace Evolution_Simulator_World
 {
-    public interface BaseObject
+    /*public interface BaseObject
     {
         Vector Pos { get; set; }
         Color Col { get; set; }
         float Hue { get; set; }
         float Radius { get; }
-    }
-    public interface SelectableObject
-    {
-        Vector Pos { get; set; }
-        float Radius { get; }
-        bool Dead { get; set; }
-    }
+    }*/
 }

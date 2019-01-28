@@ -200,9 +200,9 @@ namespace Evolution_Simulator_World
                 if(i>0)
                     for (int j = 0; j < Neurons[i].Length-1; j++)
                     {
-                        //Neurons[i][j] = ActivSig(Neurons[i][j]);
-                        if (Neurons[i][j] < 0)
-                            Neurons[i][j] = 0;
+                        Neurons[i][j] = ActivSig(Neurons[i][j]);
+                        //if (Neurons[i][j] < 0)
+                            //Neurons[i][j] = 0;
                         //else
                             //Neurons[i][j] = 0f;
                     }
@@ -238,7 +238,7 @@ namespace Evolution_Simulator_World
         }
         float ActivSig(float x)
         {
-            return 1 / (1 + (float)Exp(-x));
+            return 1 / (1 + (float)Exp(-2*x));
         }
         float ActivBump(float x)
         {
